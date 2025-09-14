@@ -1,0 +1,52 @@
+
+    MMM Modeling (Improved) - Automated draft write-up
+    -------------------------------------------------
+
+    Data preparation:
+    - Weekly data; ensured datetime ordering and filled missing values (social spends -> 0; controls forward/backfill).
+    - Adstock (exponential) applied to all spend channels with half-life = 2.0 weeks.
+    - Log1p applied to adstocked spends to model diminishing returns.
+    - Lags added: [1, 2, 4] weeks.
+    - Fourier seasonal terms added (order=3, annual period=52 weeks) and linear trend.
+    - Snapshot of engineered data saved to outputs/engineered_data_snapshot.csv
+
+    Causal framing:
+    - Google treated as a mediator between social channels and revenue.
+    - Stage-1: predict Google adstocked log-spend from social adstocked log-spends (+ seasonality/trend).
+      - To prevent leakage produced OUT-OF-SAMPLE google_hat_oos using proper TimeSeriesSplit where the stage1 model
+        is trained on each training fold and predicts the validation fold.
+    - Stage-2: predict Revenue from google_hat_oos + controls (price, promotions, email/sms, followers) + seasonality/trend.
+      - We purposely excluded raw social spends from Stage-2 to avoid "closing" the mediator path; the sensitivity
+        test below compares including/excluding the mediator.
+
+    Modeling:
+    - Both stages use Ridge regression with cross-validated alpha (range 1.0e-04 to 1.0e+04).
+    - Time series CV used: Stage1 n_splits=5, Stage2 n_splits=5.
+    - Final models (stage1_final, stage2_final) are trained on full data for reporting; per-fold OOS predictions are used
+      for performance metrics to avoid look-ahead bias.
+
+    Diagnostics:
+    - Stage1 per-fold metrics saved to outputs/stage1_cv_metrics.csv
+    - Stage2 per-fold metrics saved to outputs/stage2_cv_metrics.csv
+    - Overall OOS (stage2) RMSE: 103972.6324, R2: -0.2531
+    - Residual time series, residual ACF, coefficient plots saved to outputs/
+
+    Sensitivity & Insights:
+    - Price elasticity (finite-diff approx): mean = -1.3572, std = 0.4491
+    - Promotions elasticity (finite-diff approx): mean = -0.0375, std = 0.0751
+    - Mediator sensitivity: with mediator RMSE=103972.6324, without mediator RMSE=87382.0695
+
+    Recommendations (draft):
+    - If mediation improves predictive power and google_hat coefficient is positive & significant, social spend likely
+      works partly by stimulating search (Google). Consider incremental experiments that modulate social spend while
+      keeping Google budgets fixed (instrumental/experiment design) to validate mediation.
+    - Use the elasticity estimates as starting points for budget allocation. Validate via hold-out experiments.
+    - Watch for residual autocorrelation (see outputs/residual_acf.png) — unmodeled dynamics may remain.
+    - Consider replacing linear adstock+Ridge with a Bayesian hierarchical MMM or an additive model if you want better
+      uncertainty quantification and priors for diminishing returns.
+
+    Files produced:
+    - models/stage1_final.joblib, models/stage2_final.joblib
+    - outputs/*.png, outputs/*.csv, outputs/*.txt
+
+    

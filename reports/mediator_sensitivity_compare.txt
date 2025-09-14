@@ -1,0 +1,3 @@
+Model with mediator (google_hat_oos) vs without mediator
+With mediator - RMSE: 103972.6324, R2: -0.2531
+Without mediator - RMSE: 87382.0695, R2: 0.1149

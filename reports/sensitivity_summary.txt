@@ -1,0 +1,4 @@
+=== Sensitivity / Elasticity Estimates (approx, finite diff) ===
+Average price elasticity (mean ± std): -1.3572 ± 0.4491
+Promotions elasticity (mean ± std): -0.0375 ± 0.0751
+
